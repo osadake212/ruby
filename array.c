@@ -4934,6 +4934,44 @@ rb_ary_sample(int argc, VALUE *argv, VALUE ary)
 }
 
 static VALUE
+rb_ary_weighted_sample(int argc, VALUE* argv, VALUE ary)
+{
+    VALUE weight_ary;
+    long len = 0, i = 0, random_weight_index = 0;
+    double max_value = 0.0, random_weight = 0.0, weight_double = 0.0;
+
+    if (argc == 0) {
+        return rb_ary_sample(0, argv, ary);
+    }
+
+    weight_ary = argv[0];
+    if (TYPE(weight_ary) != T_ARRAY) {
+        return rb_ary_sample(0, argv, ary);
+    }
+
+    len = RARRAY_LEN(ary);
+    if (len < 2) {
+        return RARRAY_AREF(ary, 0);
+    }
+
+    for(i = 0; i < len; ++i) {
+        weight_double = NUM2DBL(RARRAY_AREF(weight_ary, i));
+        if (weight_double < 0.0 || weight_double > 1.0) {
+            weight_double = 0.0;
+        }
+
+        random_weight = weight_double == 0.0 ? 0.0 : pow(rb_genrand_real(), 1.0 / weight_double);
+
+        if (max_value < random_weight) {
+            max_value = random_weight;
+            random_weight_index = i;
+        }
+    }
+
+    return RARRAY_AREF(ary, random_weight_index);
+}
+
+static VALUE
 rb_ary_cycle_size(VALUE self, VALUE args, VALUE eobj)
 {
     long mul;
@@ -6236,6 +6274,7 @@ Init_Array(void)
     rb_define_method(rb_cArray, "shuffle!", rb_ary_shuffle_bang, -1);
     rb_define_method(rb_cArray, "shuffle", rb_ary_shuffle, -1);
     rb_define_method(rb_cArray, "sample", rb_ary_sample, -1);
+    rb_define_method(rb_cArray, "weighted_sample", rb_ary_weighted_sample, -1);
     rb_define_method(rb_cArray, "cycle", rb_ary_cycle, -1);
     rb_define_method(rb_cArray, "permutation", rb_ary_permutation, -1);
     rb_define_method(rb_cArray, "combination", rb_ary_combination, 1);
